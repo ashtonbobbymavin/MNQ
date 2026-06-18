@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MNQ Strategy Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --color-background-primary:#ffffff;
+    --color-background-secondary:#f5f5f3;
+    --color-background-tertiary:#eeede8;
+    --color-text-primary:#1a1a18;
+    --color-text-secondary:#6b6b67;
+    --color-border-tertiary:rgba(0,0,0,0.12);
+    --color-border-secondary:rgba(0,0,0,0.22);
+    --color-border-primary:rgba(0,0,0,0.35);
+    --border-radius-md:8px;
+    --border-radius-lg:12px;
+    --font-sans:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --color-background-primary:#1e1e1c;
+      --color-background-secondary:#2a2a28;
+      --color-background-tertiary:#242422;
+      --color-text-primary:#f0efea;
+      --color-text-secondary:#9a9994;
+      --color-border-tertiary:rgba(255,255,255,0.1);
+      --color-border-secondary:rgba(255,255,255,0.18);
+      --color-border-primary:rgba(255,255,255,0.28);
+    }
+  }
+  body{
+    background:var(--color-background-tertiary);
+    color:var(--color-text-primary);
+    font-family:var(--font-sans);
+    font-size:13px;
+    min-height:100vh;
+    padding:1.5rem;
+  }
+  h1{font-size:18px;font-weight:500;margin-bottom:.25rem}
+  .subtitle{font-size:12px;color:var(--color-text-secondary);margin-bottom:1.25rem}
+  .sim{max-width:1100px;margin:0 auto}
+  .layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:1rem;align-items:start}
+  @media(max-width:700px){.layout{grid-template-columns:1fr}}
+  .panel{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.875rem;margin-bottom:.75rem}
+  .pt{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin:0 0 .75rem}
+  .ctrl{margin-bottom:10px}
+  .ch{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .cl{font-size:11px;color:var(--color-text-secondary)}
+  .cv{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+  .ctrl input[type=range]{width:100%;margin:0;cursor:pointer}
+  .div{border:none;border-top:.5px solid var(--color-border-tertiary);margin:10px 0}
+  .mg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:.75rem}
+  .mg4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:.75rem}
+  @media(max-width:500px){.mg4{grid-template-columns:repeat(2,1fr)}}
+  .met{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px}
+  .ml{font-size:10px;color:var(--color-text-secondary);margin:0 0 2px}
+  .mv{font-size:16px;font-weight:500;color:var(--color-text-primary);margin:0}
+  .mv.pos{color:#1D9E75}.mv.neg{color:#D85A30}.mv.warn{color:#BA7517}.mv.info{color:#378ADD}
+  .tabs{display:flex;gap:5px;margin-bottom:.75rem;flex-wrap:wrap}
+  .tab{padding:4px 10px;border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:11px;cursor:pointer;background:transparent;color:var(--color-text-secondary);transition:all .15s}
+  .tab:hover{background:var(--color-background-secondary)}
+  .tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary)}
+  .cw{position:relative;width:100%;height:230px;margin-bottom:.5rem}
+  .cw-lg{position:relative;width:100%;height:260px;margin-bottom:.5rem}
+  .leg{display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--color-text-secondary);margin-bottom:5px}
+  .leg span{display:flex;align-items:center;gap:3px}
+  .sw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  .tog-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .tog-lbl{font-size:11px;color:var(--color-text-secondary)}
+  .tog{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0}
+  .tog input{opacity:0;width:0;height:0;position:absolute}
+  .tog-t{position:absolute;inset:0;background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);border-radius:10px;transition:background .2s}
+  .tog input:checked~.tog-t{background:#1D9E75;border-color:#1D9E75}
+  .tog-k{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left .2s}
+  .tog input:checked~.tog-k{left:19px}
+  .fa-rule{display:grid;grid-template-columns:1fr 80px;gap:6px;align-items:center;margin-bottom:6px;font-size:11px;color:var(--color-text-secondary)}
+  .fa-rule input[type=number]{width:80px;padding:3px 6px;border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:11px}
+  .sb{display:flex;gap:6px;margin-bottom:.75rem;align-items:center;flex-wrap:wrap}
+  .sb button{padding:5px 11px;font-size:11px;cursor:pointer;border-radius:var(--border-radius-md);border:.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);transition:all .15s}
+  .sb button:hover{background:var(--color-background-secondary)}
+  .ss{font-size:10px;color:var(--color-text-secondary)}
+  .sr{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:11px}
+  .sr:last-child{border-bottom:none}
+  .sub{font-size:10px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin:.75rem 0 .4rem}
+  .fmt-bar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.6rem}
+  .fb{display:flex;align-items:center;gap:3px;padding:3px 8px;border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:10px;cursor:pointer;background:transparent;color:var(--color-text-secondary);transition:all .15s}
+  .fb:hover{background:var(--color-background-secondary)}
+  .fb.on{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary)}
+  .fdesc{font-size:10px;color:var(--color-text-secondary);margin-top:5px;padding:5px 8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);line-height:1.5}
+  .rec-mg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:.75rem}
+  input[type=range]{accent-color:#1D9E75}
+  .edge-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:11px}
+  .edge-row:last-child{border-bottom:none}
+  .edge-row-left{display:flex;align-items:center;gap:5px;color:var(--color-text-secondary)}
+  .icon-check{color:#1D9E75;font-size:13px;font-weight:700}
+  .icon-x{color:#D85A30;font-size:13px;font-weight:700}
+  .he-cost-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+</style>
+</head>
+<body>
+<div class="sim">
+  <h1>MNQ Strategy Simulator</h1>
+  <p class="subtitle">ICT / SMC intraday reversal — London &amp; New York killzone model &nbsp;|&nbsp; Adjust inputs and switch tabs to explore outcomes</p>
+
+  <div class="sb">
+    <button onclick="saveState()">&#x1F4BE; Save</button>
+    <button onclick="loadState()">&#x2B06; Load saved</button>
+    <button onclick="resetDefaults()">&#x21BA; Reset to defaults</button>
+    <span class="ss" id="save-status"></span>
+  </div>
+
+  <div class="layout">
+  <div>
+    <div class="panel">
+      <p class="pt">Core strategy</p>
+      <div class="ctrl"><div class="ch"><span class="cl">Win rate</span><span class="cv" id="v-wr">41.7%</span></div><input type="range" min="5" max="80" step="0.5" value="41.7" id="s-wr" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Loss rate</span><span class="cv" id="v-lr">33.3%</span></div><input type="range" min="5" max="80" step="0.5" value="33.3" id="s-lr" oninput="sync()"><div style="font-size:10px;color:#BA7517;margin-top:2px" id="be-disp">Breakeven: 25.0%</div></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Avg winner (R)</span><span class="cv" id="v-aw">4.5R</span></div><input type="range" min="0.5" max="10" step="0.1" value="4.5" id="s-aw" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Avg loser (R)</span><span class="cv" id="v-al">1.0R</span></div><input type="range" min="0.5" max="3" step="0.1" value="1.0" id="s-al" oninput="sync()"></div>
+    </div>
+
+    <div class="panel">
+      <p class="pt">Account &amp; risk</p>
+      <div class="ctrl"><div class="ch"><span class="cl">Risk per trade ($)</span><span class="cv" id="v-rpt">$350</span></div><input type="range" min="50" max="1000" step="25" value="350" id="s-rpt" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Account size ($)</span><span class="cv" id="v-acc">$50,000</span></div><input type="range" min="10000" max="200000" step="1000" value="50000" id="s-acc" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Daily loss limit ($)</span><span class="cv" id="v-dll">$2,000</span></div><input type="range" min="500" max="10000" step="100" value="2000" id="s-dll" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Friction / trade ($)</span><span class="cv" id="v-fee">$10</span></div><input type="range" min="0" max="60" step="1" value="10" id="s-fee" oninput="sync()"></div>
+      <div class="div"></div>
+      <div class="tog-row"><span class="tog-lbl">Compounding (% equity)</span><label class="tog"><input type="checkbox" id="t-comp" onchange="sync()"><span class="tog-t"></span><span class="tog-k"></span></label></div>
+      <div id="comp-sl" style="display:none"><div class="ctrl"><div class="ch"><span class="cl">Risk % of equity</span><span class="cv" id="v-riskpct">0.7%</span></div><input type="range" min="0.1" max="3" step="0.1" value="0.7" id="s-riskpct" oninput="sync()"></div></div>
+    </div>
+
+    <div class="panel">
+      <p class="pt">Trade frequency</p>
+      <div class="ctrl"><div class="ch"><span class="cl">Trades per week</span><span class="cv" id="v-tpw">5</span></div><input type="range" min="1" max="15" step="1" value="5" id="s-tpw" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Max trades / day</span><span class="cv" id="v-mtd">2</span></div><input type="range" min="1" max="5" step="1" value="2" id="s-mtd" oninput="sync()"></div>
+      <div class="div"></div>
+      <div class="tog-row"><span class="tog-lbl">Setup frequency filter</span><label class="tog"><input type="checkbox" id="t-sff" onchange="sync()"><span class="tog-t"></span><span class="tog-k"></span></label></div>
+      <div id="sff-sl" style="display:none">
+        <div class="ctrl"><div class="ch"><span class="cl">% days no valid FVG</span><span class="cv" id="v-nofvg">30%</span></div><input type="range" min="0" max="70" step="5" value="30" id="s-nofvg" oninput="sync()"></div>
+        <div class="ctrl"><div class="ch"><span class="cl">% days choppy</span><span class="cv" id="v-chop">20%</span></div><input type="range" min="0" max="50" step="5" value="20" id="s-chop" oninput="sync()"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="pt">Human error</p>
+      <div class="tog-row"><span class="tog-lbl">Enable human error model</span><label class="tog"><input type="checkbox" id="t-he" onchange="sync()"><span class="tog-t"></span><span class="tog-k"></span></label></div>
+      <div id="he-sl" style="display:none">
+        <div class="ctrl"><div class="ch"><span class="cl">Early exit rate</span><span class="cv" id="v-eex">15%</span></div><input type="range" min="0" max="50" step="5" value="15" id="s-eex" oninput="sync()"><div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Closes winners at 50% of target</div></div>
+        <div class="ctrl"><div class="ch"><span class="cl">Stop move rate</span><span class="cv" id="v-smv">10%</span></div><input type="range" min="0" max="40" step="5" value="10" id="s-smv" oninput="sync()"><div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Turns 1R loss into 1.5R loss</div></div>
+        <div class="ctrl"><div class="ch"><span class="cl">Revenge trade rate</span><span class="cv" id="v-rev">8%</span></div><input type="range" min="0" max="30" step="2" value="8" id="s-rev" oninput="sync()"><div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Unplanned extra trade after loss</div></div>
+        <div class="ctrl"><div class="ch"><span class="cl">Oversize rate</span><span class="cv" id="v-ovs">5%</span></div><input type="range" min="0" max="20" step="1" value="5" id="s-ovs" oninput="sync()"><div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">2&#215; risk on this % of trades</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="pt">Funded account rules</p>
+      <div class="tog-row"><span class="tog-lbl">Enable funded account rules</span><label class="tog"><input type="checkbox" id="t-fa" onchange="sync()"><span class="tog-t"></span><span class="tog-k"></span></label></div>
+      <div id="fa-rules" style="display:none">
+        <div class="sub">Drawdown limits</div>
+        <div class="fa-rule"><span>Max overall drawdown ($)</span><input type="number" id="fa-odd" value="3000" min="500" max="20000" step="100" onchange="sync()"></div>
+        <div class="fa-rule"><span>Max daily loss ($)</span><input type="number" id="fa-dll" value="2000" min="100" max="10000" step="100" onchange="sync()"></div>
+        <div class="sub">Profit targets</div>
+        <div class="fa-rule"><span>Profit target to pass ($)</span><input type="number" id="fa-pt" value="3000" min="0" max="50000" step="100" onchange="sync()"></div>
+        <div class="sub">Consistency rules</div>
+        <div class="fa-rule"><span>Max single-day profit (% of total)</span><input type="number" id="fa-cons" value="40" min="0" max="100" step="5" onchange="sync()"></div>
+        <div class="fa-rule"><span>Min trading days required</span><input type="number" id="fa-days" value="5" min="0" max="30" step="1" onchange="sync()"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="pt">Simulation</p>
+      <div class="ctrl"><div class="ch"><span class="cl">MC paths</span><span class="cv" id="v-sims">400</span></div><input type="range" min="100" max="1000" step="100" value="400" id="s-sims" oninput="sync()"></div>
+      <div class="ctrl"><div class="ch"><span class="cl">Equity curves shown</span><span class="cv" id="v-ecn">20</span></div><input type="range" min="5" max="60" step="5" value="20" id="s-ecn" oninput="sync()"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="tabs">
+      <button class="tab on" data-tab="overview" onclick="showTab('overview')">Overview</button>
+      <button class="tab" data-tab="equity" onclick="showTab('equity')">Equity curves</button>
+      <button class="tab" data-tab="mc" onclick="showTab('mc')">Monte Carlo</button>
+      <button class="tab" data-tab="drawdown" onclick="showTab('drawdown')">Drawdown</button>
+      <button class="tab" data-tab="recovery" onclick="showTab('recovery')">DD recovery</button>
+      <button class="tab" data-tab="streaks" onclick="showTab('streaks')">Streaks</button>
+      <button class="tab" data-tab="funded" onclick="showTab('funded')">Funded rules</button>
+    </div>
+
+    <div id="tab-overview">
+      <div class="mg4">
+        <div class="met"><p class="ml">Expectancy</p><p class="mv" id="m-exp">—</p></div>
+        <div class="met"><p class="ml">Net $/trade</p><p class="mv" id="m-netpt">—</p></div>
+        <div class="met"><p class="ml">Monthly P&amp;L</p><p class="mv" id="m-mo">—</p></div>
+        <div class="met"><p class="ml">Annual P&amp;L</p><p class="mv" id="m-an">—</p></div>
+      </div>
+      <div class="mg4">
+        <div class="met"><p class="ml">Annual return %</p><p class="mv" id="m-anpct">—</p></div>
+        <div class="met"><p class="ml">Breakeven WR</p><p class="mv" id="m-bewr">—</p></div>
+        <div class="met"><p class="ml">Eff. trades/week</p><p class="mv" id="m-etpw">—</p></div>
+        <div class="met"><p class="ml">Risk % of account</p><p class="mv" id="m-rpct">—</p></div>
+      </div>
+      <div class="panel" style="margin-bottom:.75rem"><p class="pt">Edge health</p><div id="edge-rows"></div></div>
+      <div class="panel" style="margin-bottom:0"><p class="pt">Human error impact</p><div id="he-impact"></div></div>
+    </div>
+
+    <div id="tab-equity" style="display:none">
+      <div class="mg">
+        <div class="met"><p class="ml">Median final equity</p><p class="mv pos" id="eq-med">—</p></div>
+        <div class="met"><p class="ml">10th pct final equity</p><p class="mv" id="eq-p10">—</p></div>
+        <div class="met"><p class="ml">90th pct final equity</p><p class="mv pos" id="eq-p90">—</p></div>
+        <div class="met"><p class="ml">% paths profitable</p><p class="mv pos" id="eq-prof">—</p></div>
+      </div>
+      <div class="fmt-bar" id="fmt-equity"></div>
+      <div class="leg" id="leg-equity"></div>
+      <div class="cw-lg"><canvas id="c-equity" role="img" aria-label="Equity curve chart">Equity curves.</canvas></div>
+      <div class="fdesc" id="desc-equity"></div>
+    </div>
+
+    <div id="tab-mc" style="display:none">
+      <div class="mg">
+        <div class="met"><p class="ml">Median P&amp;L</p><p class="mv" id="mc-med">—</p></div>
+        <div class="met"><p class="ml">10th pct P&amp;L</p><p class="mv" id="mc-p10">—</p></div>
+        <div class="met"><p class="ml">90th pct P&amp;L</p><p class="mv" id="mc-p90">—</p></div>
+        <div class="met"><p class="ml">% profitable</p><p class="mv" id="mc-prof">—</p></div>
+      </div>
+      <div class="fmt-bar" id="fmt-mc"></div>
+      <div class="leg" id="leg-mc"></div>
+      <div class="cw-lg"><canvas id="c-mc" role="img" aria-label="Monte Carlo P&L distribution">P&L distribution.</canvas></div>
+      <div class="fdesc" id="desc-mc"></div>
+    </div>
+
+    <div id="tab-drawdown" style="display:none">
+      <div class="mg">
+        <div class="met"><p class="ml">Median max DD</p><p class="mv warn" id="dd-med">—</p></div>
+        <div class="met"><p class="ml">90th pct DD</p><p class="mv warn" id="dd-p90">—</p></div>
+        <div class="met"><p class="ml">95th pct DD</p><p class="mv neg" id="dd-p95">—</p></div>
+        <div class="met"><p class="ml">Worst path DD</p><p class="mv neg" id="dd-max">—</p></div>
+      </div>
+      <div class="fmt-bar" id="fmt-dd"></div>
+      <div class="leg" id="leg-dd"></div>
+      <div class="cw-lg"><canvas id="c-dd" role="img" aria-label="Max drawdown distribution">Drawdown distribution.</canvas></div>
+      <div class="fdesc" id="desc-dd"></div>
+    </div>
+
+    <div id="tab-recovery" style="display:none">
+      <div class="mg">
+        <div class="met"><p class="ml">Drawdown to recover ($)</p><input type="number" id="rec-dd" value="2000" min="100" max="100000" step="100" style="width:100%;margin-top:4px;padding:3px 6px;border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:14px;font-weight:500" oninput="renderRecovery()"></div>
+        <div class="met"><p class="ml">Confidence target (%)</p><input type="number" id="rec-conf" value="75" min="50" max="99" step="5" style="width:100%;margin-top:4px;padding:3px 6px;border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:14px;font-weight:500" oninput="renderRecovery()"></div>
+      </div>
+      <div class="rec-mg">
+        <div class="met"><p class="ml">Trades needed (EV)</p><p class="mv info" id="rec-trades">—</p></div>
+        <div class="met"><p class="ml">Time to recover</p><p class="mv info" id="rec-time">—</p></div>
+        <div class="met"><p class="ml">P(recover before ruin)</p><p class="mv" id="rec-prob">—</p></div>
+      </div>
+      <div class="mg">
+        <div class="met"><p class="ml">Ruin threshold ($)</p><p class="mv neg" id="rec-ruin">—</p></div>
+        <div class="met"><p class="ml">MC: % recovered in time</p><p class="mv" id="rec-mc">—</p></div>
+        <div class="met"><p class="ml">Median recovery trades</p><p class="mv" id="rec-med">—</p></div>
+        <div class="met"><p class="ml">Worst 10% (trades)</p><p class="mv warn" id="rec-worst">—</p></div>
+      </div>
+      <div class="fmt-bar" id="fmt-rec"></div>
+      <div class="leg" id="leg-rec"></div>
+      <div class="cw-lg"><canvas id="c-rec" role="img" aria-label="Recovery simulation">Recovery distribution.</canvas></div>
+      <div class="fdesc" id="desc-rec"></div>
+    </div>
+
+    <div id="tab-streaks" style="display:none">
+      <div class="mg">
+        <div class="met"><p class="ml">Exp. max streak (100T)</p><p class="mv warn" id="str-100">—</p></div>
+        <div class="met"><p class="ml">Exp. max streak (260T)</p><p class="mv warn" id="str-260">—</p></div>
+        <div class="met"><p class="ml">Cost max streak (100T)</p><p class="mv neg" id="str-c100">—</p></div>
+        <div class="met"><p class="ml">Cost max streak (260T)</p><p class="mv neg" id="str-c260">—</p></div>
+      </div>
+      <div class="fmt-bar" id="fmt-streaks"></div>
+      <div class="leg" id="leg-streaks"></div>
+      <div class="cw"><canvas id="c-streaks" role="img" aria-label="Streak probability chart">Streak probabilities.</canvas></div>
+      <div class="fdesc" id="desc-streaks"></div>
+      <div class="panel" style="margin-bottom:0;margin-top:.75rem"><p class="pt">Loss streak probability table</p><div id="streak-rows"></div></div>
+    </div>
+
+    <div id="tab-funded" style="display:none">
+      <div id="funded-off" style="padding:1rem;text-align:center;color:var(--color-text-secondary);font-size:12px">Enable funded account rules in the left panel to see analysis here.</div>
+      <div id="funded-on" style="display:none">
+        <div class="mg4">
+          <div class="met"><p class="ml">Pass probability</p><p class="mv" id="fa-passp">—</p></div>
+          <div class="met"><p class="ml">Avg trades to pass</p><p class="mv" id="fa-avgpass">—</p></div>
+          <div class="met"><p class="ml">Breach rate</p><p class="mv neg" id="fa-breach">—</p></div>
+          <div class="met"><p class="ml">Consistency fail rate</p><p class="mv warn" id="fa-consfail">—</p></div>
+        </div>
+        <div class="panel" style="margin-bottom:.75rem"><p class="pt">Rule compliance check</p><div id="fa-checks"></div></div>
+        <div class="fmt-bar" id="fmt-fa"></div>
+        <div class="leg" id="leg-fa"></div>
+        <div class="cw"><canvas id="c-fa" role="img" aria-label="Funded account outcomes">Funded account outcomes.</canvas></div>
+        <div class="fdesc" id="desc-fa"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script>
+const fD=v=>(v<0?'-$':'$')+Math.abs(Math.round(v)).toLocaleString();
+const fR=v=>(v>=0?'+':'')+v.toFixed(2)+'R';
+const fP=v=>v.toFixed(1)+'%';
+const g=id=>document.getElementById(id);
+const pctA=(arr,p)=>{const s=[...arr].sort((a,b)=>a-b);return s[Math.max(0,Math.min(Math.floor(p/100*(s.length-1)),s.length-1))]||0};
+const meanA=arr=>arr.reduce((a,b)=>a+b,0)/arr.length;
+const CHARTS={};
+let currentTab='overview';
+
+const FMT_DEFS={
+  equity:[{id:'line',label:'Line'},{id:'area',label:'Area'},{id:'fan',label:'Fan'},{id:'scatter',label:'Scatter (end)'}],
+  mc:[{id:'histogram',label:'Histogram'},{id:'bar',label:'Bar'},{id:'cdf',label:'CDF'},{id:'hbar',label:'Horiz. bar'}],
+  dd:[{id:'histogram',label:'Histogram'},{id:'bar',label:'Bar'},{id:'cdf',label:'CDF'},{id:'area',label:'Area'}],
+  rec:[{id:'bar',label:'Bar'},{id:'line',label:'Line'},{id:'area',label:'Area'}],
+  streaks:[{id:'bar',label:'Bar'},{id:'line',label:'Line'},{id:'area',label:'Area'},{id:'hbar',label:'Horiz. bar'},{id:'scatter',label:'Scatter'}],
+  fa:[{id:'bar',label:'Bar'},{id:'doughnut',label:'Doughnut'},{id:'pie',label:'Pie'},{id:'hbar',label:'Horiz. bar'}]
+};
+const FMT_DESC={
+  equity:{line:'Each line = one MC path. Green = profitable, red = loss, blue = median.',area:'Shaded band = 25th–75th percentile equity at each step with median overlaid.',fan:'5-percentile fan (10/25/50/75/90) shows how outcomes spread over time.',scatter:'Each dot = one simulation\'s final equity.'},
+  mc:{histogram:'Fine-grained frequency histogram of P&L outcomes.',bar:'Coarser bar chart of P&L buckets.',cdf:'Cumulative probability of ending at or below each P&L level.',hbar:'Horizontal bar view of P&L buckets.'},
+  dd:{histogram:'Fine-grained histogram of max drawdown across all paths.',bar:'Coarser bar chart of drawdown distribution.',cdf:'Cumulative probability that max DD is at or below a given level.',area:'Area chart emphasising the shape of the drawdown distribution.'},
+  rec:{bar:'Bar chart of trades needed to recover the drawdown.',line:'Line chart of recovery trade count distribution.',area:'Area chart of recovery distribution.'},
+  streaks:{bar:'Probability of each consecutive loss streak length.',line:'Line chart — exponential decay of streak probability clearly visible.',area:'Area chart — filled shape emphasises where probability mass sits.',hbar:'Horizontal bars — easier label comparison.',scatter:'Each dot = one streak length plotted against its probability.'},
+  fa:{bar:'Bar chart of pass / breach / consistency-fail / no-result counts.',doughnut:'Doughnut chart of outcome proportions.',pie:'Pie chart of outcome proportions.',hbar:'Horizontal bar view of outcome counts.'}
+};
+let activeFmt={equity:'line',mc:'histogram',dd:'histogram',rec:'bar',streaks:'bar',fa:'bar'};
+
+function buildFmtBar(key){
+  const el=g('fmt-'+key);if(!el)return;
+  el.innerHTML=FMT_DEFS[key].map(f=>`<button class="fb ${activeFmt[key]===f.id?'on':''}" onclick="setFmt('${key}','${f.id}')">${f.label}</button>`).join('');
+}
+function setFmt(key,fmt){activeFmt[key]=fmt;buildFmtBar(key);renderTab(key);}
+function setLeg(key,items){const el=g('leg-'+key);if(!el)return;el.innerHTML=items.map(i=>`<span><span class="sw" style="background:${i.col};opacity:${i.op||1}"></span>${i.label}</span>`).join('');}
+function setDesc(key,txt){const el=g('desc-'+key);if(el)el.textContent=txt||'';}
+function setH(id,h){const el=g(id);if(el&&el.parentElement)el.parentElement.style.height=h+'px';}
+function destroyChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}}
+function mkChart(id,cfg){destroyChart(id);const ctx=g(id).getContext('2d');CHARTS[id]=new Chart(ctx,cfg);return CHARTS[id];}
+
+function getP(){
+  return{wr:+g('s-wr').value/100,lr:+g('s-lr').value/100,aw:+g('s-aw').value,al:+g('s-al').value,rpt:+g('s-rpt').value,acc:+g('s-acc').value,dll:+g('s-dll').value,fee:+g('s-fee').value,tpw:+g('s-tpw').value,mtd:+g('s-mtd').value,sims:+g('s-sims').value,ecn:+g('s-ecn').value,riskpct:+g('s-riskpct').value/100,nofvg:+g('s-nofvg').value/100,chop:+g('s-chop').value/100,eex:+g('s-eex').value/100,smv:+g('s-smv').value/100,rev:+g('s-rev').value/100,ovs:+g('s-ovs').value/100,comp:g('t-comp').checked,sff:g('t-sff').checked,he:g('t-he').checked,fa:g('t-fa').checked,fa_odd:+g('fa-odd').value,fa_dll:+g('fa-dll').value,fa_pt:+g('fa-pt').value,fa_cons:+g('fa-cons').value/100,fa_days:+g('fa-days').value};
+}
+function effTrades(p){if(!p.sff)return p.tpw;return p.tpw*(1-p.nofvg)*(1-p.chop*0.5);}
+function drawTrade(p,eq){
+  const risk=p.comp?eq*p.riskpct:p.rpt;
+  const r=Math.random();
+  let R=r<p.wr?p.aw:r<p.wr+p.lr?-p.al:0;
+  const isW=R>0,isL=R<0;
+  if(p.he){if(isW&&Math.random()<p.eex)R=p.aw*0.5;if(isL&&Math.random()<p.smv)R=-p.al*1.5;if(isL&&Math.random()<p.rev)R+=(-p.al);if(Math.random()<p.ovs)R*=2;}
+  return R*risk-p.fee;
+}
+function runMC(nT,p){
+  const finals=[],maxDDs=[],paths=[];
+  for(let s=0;s<p.sims;s++){let bal=0,pk=0,mdd=0,path=[p.acc];for(let t=0;t<nT;t++){bal+=drawTrade(p,p.acc+bal);const eq=p.acc+bal;if(eq>p.acc+pk)pk=eq-p.acc;const dd=(p.acc+pk)-eq;if(dd>mdd)mdd=dd;if(s<p.ecn)path.push(Math.round(eq));}finals.push(Math.round(bal));maxDDs.push(Math.round(mdd));if(s<p.ecn)paths.push(path);}
+  return{finals,maxDDs,paths};
+}
+function runFunded(p){
+  const nT=Math.round(p.tpw*52);let passed=0,breached=0,consFail=0,tradesToPass=[];
+  for(let s=0;s<p.sims;s++){let bal=0,pk=0,mdd=0,done=false,days=0,maxDayPnl=0,dayBal=0,result='none';for(let t=0;t<nT&&!done;t++){const tr=drawTrade(p,p.acc+bal);bal+=tr;dayBal+=tr;if(dayBal>0)maxDayPnl=Math.max(maxDayPnl,dayBal);if(bal>pk)pk=bal;const dd=pk-bal;if(dd>mdd)mdd=dd;if((t+1)%p.mtd===0){days++;dayBal=0;}if(mdd>=p.fa_odd||bal<=-p.fa_dll){done=true;result='breach';}else if(bal>=p.fa_pt&&days>=p.fa_days){if(p.fa_cons>0&&bal>0&&maxDayPnl/bal>p.fa_cons){done=true;result='consfail';}else{done=true;result='pass';tradesToPass.push(t+1);}}}if(result==='pass')passed++;else if(result==='breach')breached++;else if(result==='consfail')consFail++;}
+  return{passed,breached,consFail,tradesToPass,total:p.sims};
+}
+function histogram(data,bins){
+  const mn=Math.min(...data),mx=Math.max(...data);
+  if(mn===mx)return{labels:[mn],counts:[data.length],min:mn,width:1};
+  const w=(mx-mn)/bins,counts=Array(bins).fill(0),labels=[];
+  for(let i=0;i<bins;i++)labels.push(mn+(i+0.5)*w);
+  data.forEach(v=>{let b=Math.floor((v-mn)/w);if(b>=bins)b=bins-1;counts[b]++;});
+  return{labels,counts,min:mn,width:w};
+}
+const baseOpts=(yFmt)=>({responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:45,autoSkip:true,maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:yFmt||(v=>v)},grid:{color:'rgba(128,128,128,0.08)'}}}});
+
+function renderEquity(){
+  const p=getP();const nT=Math.round(effTrades(p)*52);
+  const d=runMC(nT,p);const finals=d.paths.map(x=>x[x.length-1]);
+  const med=pctA(finals,50),p10=pctA(finals,10),p90=pctA(finals,90),prof=finals.filter(v=>v>=p.acc).length;
+  g('eq-med').textContent=fD(med);g('eq-med').className='mv '+(med>=p.acc?'pos':'neg');
+  g('eq-p10').textContent=fD(p10);g('eq-p10').className='mv '+(p10>=p.acc?'pos':'neg');
+  g('eq-p90').textContent=fD(p90);g('eq-p90').className='mv pos';
+  g('eq-prof').textContent=fP(prof/d.paths.length*100);
+  const labels=Array.from({length:nT+1},(_,i)=>i);
+  const fmt=activeFmt.equity;setDesc('equity',FMT_DESC.equity[fmt]);destroyChart('c-equity');setH('c-equity',260);
+  if(fmt==='line'){
+    setLeg('equity',[{col:'#1D9E75',op:.5,label:'Profitable'},{col:'#D85A30',op:.4,label:'Loss'},{col:'#378ADD',label:'Median'}]);
+    const ds=d.paths.map(path=>({data:path,borderColor:path[path.length-1]>=p.acc?'rgba(29,158,117,0.3)':'rgba(216,90,48,0.25)',borderWidth:1,pointRadius:0,fill:false,tension:.2}));
+    const mPath=d.paths.reduce((b,x)=>Math.abs(x[x.length-1]-med)<Math.abs(b[b.length-1]-med)?x:b,d.paths[0]);
+    ds.push({data:mPath,borderColor:'#378ADD',borderWidth:2.5,pointRadius:0,fill:false,tension:.2});
+    mkChart('c-equity',{type:'line',data:{labels,datasets:ds},options:{...baseOpts(v=>fD(v)),animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  }else if(fmt==='area'){
+    setLeg('equity',[{col:'#1D9E75',op:.3,label:'25–75th pct band'},{col:'#378ADD',label:'Median'}]);
+    const b25=[],b75=[],bmed=[];
+    for(let t=0;t<=nT;t++){const vs=d.paths.map(x=>x[t]).sort((a,b)=>a-b);b25.push(vs[Math.floor(vs.length*.25)]);b75.push(vs[Math.floor(vs.length*.75)]);bmed.push(vs[Math.floor(vs.length*.5)]);}
+    mkChart('c-equity',{type:'line',data:{labels,datasets:[{data:b75,borderColor:'rgba(29,158,117,.4)',borderWidth:1,pointRadius:0,fill:'+1',backgroundColor:'rgba(29,158,117,.12)',tension:.3},{data:b25,borderColor:'rgba(29,158,117,.4)',borderWidth:1,pointRadius:0,fill:false,tension:.3},{data:bmed,borderColor:'#378ADD',borderWidth:2,pointRadius:0,fill:false,tension:.3}]},options:{...baseOpts(v=>fD(v)),animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  }else if(fmt==='fan'){
+    setLeg('equity',[{col:'#378ADD',op:.15,label:'10–90th pct'},{col:'#378ADD',op:.3,label:'25–75th pct'},{col:'#378ADD',label:'Median'}]);
+    const bds=[10,25,50,75,90].map(b=>{const arr=[];for(let t=0;t<=nT;t++){const vs=d.paths.map(x=>x[t]).sort((a,c)=>a-c);arr.push(vs[Math.floor(vs.length*(b/100))]);}return arr;});
+    mkChart('c-equity',{type:'line',data:{labels,datasets:[{data:bds[0],borderColor:'rgba(55,138,221,.15)',borderWidth:1,pointRadius:0,fill:'+3',backgroundColor:'rgba(55,138,221,.07)',tension:.3},{data:bds[1],borderColor:'rgba(55,138,221,.25)',borderWidth:1,pointRadius:0,fill:'+1',backgroundColor:'rgba(55,138,221,.1)',tension:.3},{data:bds[2],borderColor:'#378ADD',borderWidth:2.5,pointRadius:0,fill:false,tension:.3},{data:bds[3],borderColor:'rgba(55,138,221,.25)',borderWidth:1,pointRadius:0,fill:false,tension:.3},{data:bds[4],borderColor:'rgba(55,138,221,.15)',borderWidth:1,pointRadius:0,fill:false,tension:.3}]},options:{...baseOpts(v=>fD(v)),animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  }else if(fmt==='scatter'){
+    setLeg('equity',[{col:'#1D9E75',op:.7,label:'Profitable'},{col:'#D85A30',op:.7,label:'Loss'}]);
+    const pts=finals.map((v,i)=>({x:i+1,y:v}));
+    mkChart('c-equity',{type:'scatter',data:{datasets:[{data:pts.filter(x=>x.y>=p.acc),backgroundColor:'rgba(29,158,117,.6)',pointRadius:4},{data:pts.filter(x=>x.y<p.acc),backgroundColor:'rgba(216,90,48,.6)',pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}},title:{display:true,text:'Path #',font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fD(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  }
+}
+
+function renderMC(){
+  const p=getP();const nT=Math.round(effTrades(p)*52);
+  const d=runMC(nT,p);const data=d.finals;
+  const med=pctA(data,50),p10=pctA(data,10),p90=pctA(data,90),prof=data.filter(v=>v>0).length;
+  const setM=(id,v)=>{g(id).textContent=fD(v);g(id).className='mv '+(v>=0?'pos':'neg')};
+  setM('mc-med',med);setM('mc-p10',p10);setM('mc-p90',p90);
+  g('mc-prof').textContent=fP(prof/p.sims*100);
+  const fmt=activeFmt.mc;setDesc('mc',FMT_DESC.mc[fmt]);destroyChart('c-mc');setH('c-mc',260);
+  if(fmt==='histogram'||fmt==='bar'){
+    const h=histogram(data,fmt==='histogram'?36:20);const zI=-h.min/h.width;
+    setLeg('mc',[{col:'#1D9E75',label:'Profitable'},{col:'#D85A30',label:'Loss'}]);
+    mkChart('c-mc',{type:'bar',data:{labels:h.labels.map(v=>fD(v)),datasets:[{data:h.counts,backgroundColor:h.labels.map((_,i)=>i>=zI?'#1D9E75':'#D85A30'),borderWidth:0,barPercentage:1,categoryPercentage:1}]},options:{...baseOpts(),plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} paths`}}}}});
+  }else if(fmt==='cdf'){
+    setLeg('mc',[{col:'#378ADD',label:'Cumulative probability'}]);
+    const s=[...data].sort((a,b)=>a-b);
+    mkChart('c-mc',{type:'line',data:{labels:s.map(v=>fD(v)),datasets:[{data:s.map((_,i)=>+((i+1)/s.length*100).toFixed(2)),borderColor:'#378ADD',borderWidth:2,pointRadius:0,fill:false,tension:.1}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:45,autoSkip:true,maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v+'%'},title:{display:true,text:'Cumulative %',font:{size:10}}}}}});
+  }else if(fmt==='hbar'){
+    const h=histogram(data,16);const zI=-h.min/h.width;
+    setLeg('mc',[{col:'#1D9E75',label:'Profitable'},{col:'#D85A30',label:'Loss'}]);
+    setH('c-mc',Math.max(280,h.labels.length*22+60));
+    mkChart('c-mc',{type:'bar',data:{labels:h.labels.map(v=>fD(v)),datasets:[{data:h.counts,backgroundColor:h.labels.map((_,i)=>i>=zI?'#1D9E75':'#D85A30'),borderWidth:0,barPercentage:.8}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} paths`}}},scales:{x:{ticks:{font:{size:10}},title:{display:true,text:'Paths',font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}}}}}});
+  }
+}
+
+function renderDD(){
+  const p=getP();const nT=Math.round(effTrades(p)*52);
+  const d=runMC(nT,p);const data=d.maxDDs;
+  g('dd-med').textContent=fD(pctA(data,50));g('dd-p90').textContent=fD(pctA(data,90));
+  g('dd-p95').textContent=fD(pctA(data,95));g('dd-max').textContent=fD(Math.max(...data));
+  const fmt=activeFmt.dd;setDesc('dd',FMT_DESC.dd[fmt]);destroyChart('c-dd');setH('c-dd',260);
+  if(fmt==='histogram'||fmt==='bar'){
+    const h=histogram(data,fmt==='histogram'?32:18);
+    setLeg('dd',[{col:'#E24B4A',label:'Drawdown magnitude'}]);
+    mkChart('c-dd',{type:'bar',data:{labels:h.labels.map(v=>fD(v)),datasets:[{data:h.counts,backgroundColor:'#E24B4A',borderWidth:0,barPercentage:1,categoryPercentage:1}]},options:{...baseOpts(),plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} paths`}}}}});
+  }else if(fmt==='cdf'){
+    setLeg('dd',[{col:'#E24B4A',label:'P(max DD ≤ x)'}]);
+    const s=[...data].sort((a,b)=>a-b);
+    mkChart('c-dd',{type:'line',data:{labels:s.map(v=>fD(v)),datasets:[{data:s.map((_,i)=>+((i+1)/s.length*100).toFixed(2)),borderColor:'#E24B4A',borderWidth:2,pointRadius:0,fill:false,tension:.1}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:45,autoSkip:true,maxTicksLimit:10,font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v+'%'},title:{display:true,text:'Cumulative %',font:{size:10}}}}}});
+  }else if(fmt==='area'){
+    setLeg('dd',[{col:'#E24B4A',op:.3,label:'Frequency area'}]);
+    const h=histogram(data,24);
+    mkChart('c-dd',{type:'line',data:{labels:h.labels.map(v=>fD(v)),datasets:[{data:h.counts,borderColor:'#E24B4A',borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:'rgba(226,75,74,.18)',tension:.4}]},options:{...baseOpts(),plugins:{legend:{display:false}}}});
+  }
+}
+
+function renderRecovery(){
+  const p=getP();const dd=+g('rec-dd').value||2000;const conf=+g('rec-conf').value/100||.75;
+  const exp=p.wr*p.aw-p.lr*p.al;const netPt=exp*p.rpt-p.fee;
+  const tEV=netPt>0?Math.ceil(dd/netPt):9999;const etpw=effTrades(p);
+  g('rec-trades').textContent=tEV<9999?tEV+' trades':'N/A';
+  g('rec-time').textContent=tEV<9999?(tEV/etpw<4.5?Math.ceil(tEV/etpw)+'w':Math.ceil(tEV/etpw/4.33)+'mo'):'—';
+  g('rec-ruin').textContent=fD(-p.dll);
+  const RSIMS=300,recT=[];let ruined=0;
+  for(let s=0;s<RSIMS;s++){let bal=0,done=false;for(let t=0;t<600&&!done;t++){bal+=drawTrade(p,p.acc);if(bal>=0){done=true;recT.push(t+1);}else if(bal<=-p.dll){done=true;ruined++;}}if(!done)recT.push(600);}
+  const recP=(RSIMS-ruined)/RSIMS;
+  g('rec-prob').textContent=fP(recP*100);g('rec-prob').className='mv '+(recP>.8?'pos':recP>.5?'warn':'neg');
+  const confT=recT.length?[...recT].sort((a,b)=>a-b)[Math.floor(conf*recT.length)]:0;
+  g('rec-mc').textContent=recT.length?fP(recT.filter(v=>v<confT).length/recT.length*100):'—';
+  g('rec-med').textContent=recT.length?Math.round(meanA(recT))+' trades':'—';
+  g('rec-worst').textContent=recT.length?pctA(recT,90)+' trades':'—';
+  const fmt=activeFmt.rec;setDesc('rec',FMT_DESC.rec[fmt]);destroyChart('c-rec');setH('c-rec',240);
+  if(recT.length>2){
+    const h=histogram(recT,20);
+    if(fmt==='bar'||fmt==='area'){
+      setLeg('rec',[{col:'#1D9E75',label:'Paths recovered in N trades'}]);
+      mkChart('c-rec',{type:fmt==='area'?'line':'bar',data:{labels:h.labels.map(v=>Math.round(v)+'T'),datasets:[{data:h.counts,backgroundColor:fmt==='bar'?'#1D9E75':'rgba(29,158,117,.2)',borderColor:'#1D9E75',borderWidth:fmt==='area'?1.5:0,fill:fmt==='area',tension:.3,barPercentage:1,categoryPercentage:1}]},options:{...baseOpts(),plugins:{legend:{display:false}}}});
+    }else if(fmt==='line'){
+      setLeg('rec',[{col:'#378ADD',label:'Recovery distribution'}]);
+      mkChart('c-rec',{type:'line',data:{labels:h.labels.map(v=>Math.round(v)+'T'),datasets:[{data:h.counts,borderColor:'#378ADD',borderWidth:2,pointRadius:3,fill:false,tension:.3}]},options:{...baseOpts(),plugins:{legend:{display:false}}}});
+    }
+  }
+}
+
+function renderStreaks(){
+  const p=getP();const lp=p.lr;const ns=[2,3,4,5,6,7,8,9,10];
+  const probs=ns.map(n=>+(Math.pow(lp,n)*100).toFixed(4));
+  const nT=Math.round(effTrades(p)*52);
+  const s100=Math.log(100)/Math.log(1/lp),s260=Math.log(nT||260)/Math.log(1/lp);
+  g('str-100').textContent=s100.toFixed(1)+' losses';g('str-260').textContent=s260.toFixed(1)+' losses';
+  g('str-c100').textContent=fD(-Math.round(s100)*p.al*p.rpt);g('str-c260').textContent=fD(-Math.round(s260)*p.al*p.rpt);
+  g('streak-rows').innerHTML=ns.map((n,i)=>`<div class="sr"><span style="color:var(--color-text-secondary)">${n} consecutive losses</span><span style="display:flex;gap:8px"><span style="font-weight:500">${probs[i].toFixed(3)}%</span><span style="color:#D85A30">${fD(-n*p.al*p.rpt)}</span></span></div>`).join('');
+  const labels=ns.map(n=>`${n} losses`);
+  const fmt=activeFmt.streaks;setDesc('streaks',FMT_DESC.streaks[fmt]);destroyChart('c-streaks');setH('c-streaks',210);
+  const streakCols=probs.map((_,i)=>i<3?'#BA7517':i<5?'#D85A30':'#E24B4A');
+  if(fmt==='bar'||fmt==='area'||fmt==='line'){
+    setLeg('streaks',[{col:'#BA7517',label:'Moderate'},{col:'#D85A30',label:'High'},{col:'#E24B4A',label:'Severe'}]);
+    const ds=[{data:probs,borderColor:'#E24B4A',borderWidth:fmt==='line'||fmt==='area'?2:0,backgroundColor:fmt==='bar'?streakCols:fmt==='area'?'rgba(226,75,74,.15)':'transparent',pointRadius:fmt==='line'?4:0,pointBackgroundColor:streakCols,fill:fmt==='area',tension:.2,barPercentage:.65}];
+    mkChart('c-streaks',{type:fmt==='bar'?'bar':'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${typeof c.raw==='number'?c.raw.toFixed(4):c.raw}%`}}},scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v+'%'},title:{display:true,text:'Probability (%)',font:{size:10}}}}}});
+  }else if(fmt==='hbar'){
+    setH('c-streaks',Math.max(210,ns.length*28+60));
+    setLeg('streaks',[{col:'#E24B4A',label:'Streak probability'}]);
+    mkChart('c-streaks',{type:'bar',data:{labels,datasets:[{data:probs,backgroundColor:streakCols,borderWidth:0,barPercentage:.65}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.toFixed(4)}%`}}},scales:{x:{ticks:{font:{size:10},callback:v=>v+'%'},title:{display:true,text:'Probability (%)',font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:11}}}}}});
+  }else if(fmt==='scatter'){
+    setLeg('streaks',[{col:'#E24B4A',label:'Each dot = one streak length'}]);
+    mkChart('c-streaks',{type:'scatter',data:{datasets:[{data:ns.map((n,i)=>({x:n,y:probs[i]})),backgroundColor:'rgba(226,75,74,.7)',pointRadius:7}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.x} losses: ${c.raw.y.toFixed(4)}%`}}},scales:{x:{ticks:{font:{size:11},stepSize:1},title:{display:true,text:'Consecutive losses',font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v+'%'},title:{display:true,text:'Probability (%)',font:{size:10}}}}}});
+  }
+}
+
+function renderFunded(){
+  const p=getP();
+  if(!p.fa){g('funded-off').style.display='';g('funded-on').style.display='none';return;}
+  g('funded-off').style.display='none';g('funded-on').style.display='';
+  const res=runFunded(p);
+  g('fa-passp').textContent=fP(res.passed/res.total*100);g('fa-passp').className='mv '+(res.passed/res.total>.6?'pos':res.passed/res.total>.3?'warn':'neg');
+  g('fa-avgpass').textContent=res.tradesToPass.length?Math.round(meanA(res.tradesToPass))+' trades':'—';
+  g('fa-breach').textContent=fP(res.breached/res.total*100);g('fa-breach').className='mv '+(res.breached/res.total<.1?'pos':res.breached/res.total<.3?'warn':'neg');
+  g('fa-consfail').textContent=fP(res.consFail/res.total*100);
+  const exp=p.wr*p.aw-p.lr*p.al;const netPt=exp*p.rpt-p.fee;
+  const checks=[{label:'Max daily loss vs DLL',ok:p.mtd*p.al*p.rpt<p.fa_dll,val:fD(p.mtd*p.al*p.rpt)+' vs '+fD(p.fa_dll)},{label:'Risk % sustainable',ok:(p.rpt/p.acc)*100<2,val:((p.rpt/p.acc)*100).toFixed(2)+'%'},{label:'Profit target reachable',ok:netPt*p.fa_days*p.tpw/5>p.fa_pt*.1,val:'~'+fD(netPt*p.fa_days*p.tpw/5)+' in '+p.fa_days+'d'},{label:'Overall DD buffer',ok:p.fa_odd>p.mtd*p.al*p.rpt*3,val:fD(p.fa_odd)+' vs '+fD(p.mtd*p.al*p.rpt*3)}];
+  g('fa-checks').innerHTML=checks.map(c=>`<div class="edge-row"><div class="edge-row-left"><span class="${c.ok?'icon-check':'icon-x'}">${c.ok?'✓':'✗'}</span>${c.label}</div><span style="font-weight:500;color:var(--color-text-primary)">${c.val}</span></div>`).join('');
+  const cats=['Passed','Breached DD','Consistency fail','No result'],vals=[res.passed,res.breached,res.consFail,res.total-res.passed-res.breached-res.consFail],cols=['#1D9E75','#D85A30','#BA7517','#888780'];
+  const fmt=activeFmt.fa;setDesc('fa',FMT_DESC.fa[fmt]);destroyChart('c-fa');setH('c-fa',200);
+  if(fmt==='bar'){
+    setLeg('fa',cats.map((l,i)=>({col:cols[i],label:l})));
+    mkChart('c-fa',{type:'bar',data:{labels:cats,datasets:[{data:vals,backgroundColor:cols,borderWidth:0,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} paths (${(c.raw/res.total*100).toFixed(1)}%)`}}},scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{ticks:{font:{size:10}},title:{display:true,text:'Paths',font:{size:10}}}}}});
+  }else if(fmt==='hbar'){
+    setH('c-fa',Math.max(200,cats.length*36+60));setLeg('fa',cats.map((l,i)=>({col:cols[i],label:l})));
+    mkChart('c-fa',{type:'bar',data:{labels:cats,datasets:[{data:vals,backgroundColor:cols,borderWidth:0,barPercentage:.6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}},title:{display:true,text:'Paths',font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:11}}}}}});
+  }else if(fmt==='doughnut'||fmt==='pie'){
+    setLeg('fa',cats.map((l,i)=>({col:cols[i],label:`${l} (${vals[i]})`})));
+    mkChart('c-fa',{type:fmt,data:{labels:cats,datasets:[{data:vals,backgroundColor:cols,borderWidth:2,borderColor:'transparent'}]},options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:fmt==='doughnut'?'55%':0,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${(c.raw/res.total*100).toFixed(1)}%)`}}}}});
+  }
+}
+
+function renderOverview(){
+  const p=getP();
+  const exp=p.wr*p.aw-p.lr*p.al,netPt=exp*p.rpt-p.fee;
+  const etpw=effTrades(p),monthly=netPt*etpw*4.33,annual=netPt*etpw*52;
+  const annPct=annual/p.acc*100,beWR=p.al/(p.aw+p.al)*100,rpct=(p.rpt/p.acc)*100;
+  const setM=(id,v,cls,fmt2)=>{const e=g(id);e.textContent=fmt2?fmt2(v):fD(v);e.className='mv '+cls;};
+  setM('m-exp',exp,exp>0?'pos':exp<0?'neg':'warn',fR);setM('m-netpt',netPt,netPt>0?'pos':netPt<0?'neg':'warn');
+  setM('m-mo',monthly,monthly>0?'pos':monthly<0?'neg':'warn');setM('m-an',annual,annual>0?'pos':annual<0?'neg':'warn');
+  g('m-anpct').textContent=annPct.toFixed(1)+'%';g('m-anpct').className='mv '+(annPct>0?'pos':'neg');
+  g('m-bewr').textContent=beWR.toFixed(1)+'%';
+  g('m-etpw').textContent=etpw.toFixed(1);g('m-etpw').className='mv '+(etpw<p.tpw?'warn':'info');
+  g('m-rpct').textContent=rpct.toFixed(2)+'%';g('m-rpct').className='mv '+(rpct>2?'neg':rpct>1?'warn':'pos');
+  const edgeItems=[{label:'Positive expectancy',ok:exp>0,val:fR(exp)},{label:'Win rate above breakeven',ok:p.wr*100>beWR,val:fP(p.wr*100)+' vs '+beWR.toFixed(1)+'% min'},{label:'Net per trade positive',ok:netPt>0,val:fD(netPt)},{label:'Risk ≤2% of account',ok:rpct<=2,val:rpct.toFixed(2)+'%'},{label:'R:R ratio ≥2:1',ok:p.aw/p.al>=2,val:(p.aw/p.al).toFixed(1)+':1'},{label:'Eff. trade freq adequate',ok:etpw>=3,val:etpw.toFixed(1)+'/week'},{label:'DLL buffer >30%',ok:p.dll-p.mtd*p.al*p.rpt>p.dll*.3,val:fD(p.dll-p.mtd*p.al*p.rpt)+' buffer'}];
+  g('edge-rows').innerHTML=edgeItems.map(e=>`<div class="edge-row"><div class="edge-row-left"><span class="${e.ok?'icon-check':'icon-x'}">${e.ok?'✓':'✗'}</span>${e.label}</div><span style="font-weight:500;color:var(--color-text-primary)">${e.val}</span></div>`).join('');
+  if(p.he){
+    const eeI=p.eex*p.wr*(p.aw*.5-p.aw)*p.rpt,smvI=-(p.smv*p.lr*p.al*.5*p.rpt),revI=-(p.rev*p.lr*p.al*p.rpt),ovsI=p.ovs*exp*p.rpt,total=eeI+smvI+revI+ovsI;
+    g('he-impact').innerHTML=`<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:6px">Estimated cost per trade from each error type:</div>`+[['Early exits',eeI],['Stop moves',smvI],['Revenge trades',revI],['Oversizing',ovsI]].map(([l,v])=>`<div class="he-cost-row"><span style="color:var(--color-text-secondary)">${l}</span><span style="color:${v<0?'#D85A30':'#1D9E75'};font-weight:500">${fD(v)}/trade</span></div>`).join('')+`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;font-weight:500"><span>Net error cost/trade</span><span style="color:${total<0?'#D85A30':'#1D9E75'}">${fD(total)}</span></div>`;
+  }else{g('he-impact').innerHTML='<div style="font-size:11px;color:var(--color-text-secondary)">Enable human error model in the left panel to see impact analysis.</div>';}
+}
+
+function renderTab(key){
+  if(key==='equity')renderEquity();else if(key==='mc')renderMC();else if(key==='drawdown'||key==='dd')renderDD();else if(key==='recovery'||key==='rec')renderRecovery();else if(key==='streaks')renderStreaks();else if(key==='funded'||key==='fa')renderFunded();
+}
+
+function sync(){
+  const p=getP();
+  g('v-wr').textContent=fP(p.wr*100);g('v-lr').textContent=fP(p.lr*100);
+  g('be-disp').textContent='Breakeven: '+Math.max(0,100-p.wr*100-p.lr*100).toFixed(1)+'%';
+  g('v-aw').textContent=p.aw.toFixed(1)+'R';g('v-al').textContent=p.al.toFixed(1)+'R';
+  g('v-rpt').textContent='$'+p.rpt;g('v-acc').textContent='$'+p.acc.toLocaleString();
+  g('v-dll').textContent='$'+p.dll.toLocaleString();g('v-fee').textContent='$'+p.fee;
+  g('v-tpw').textContent=p.tpw;g('v-mtd').textContent=p.mtd;g('v-sims').textContent=p.sims;g('v-ecn').textContent=p.ecn;
+  g('v-riskpct').textContent=fP(p.riskpct*100);g('v-nofvg').textContent=(p.nofvg*100).toFixed(0)+'%';g('v-chop').textContent=(p.chop*100).toFixed(0)+'%';
+  g('v-eex').textContent=(p.eex*100).toFixed(0)+'%';g('v-smv').textContent=(p.smv*100).toFixed(0)+'%';g('v-rev').textContent=(p.rev*100).toFixed(0)+'%';g('v-ovs').textContent=(p.ovs*100).toFixed(0)+'%';
+  g('comp-sl').style.display=p.comp?'':'none';g('sff-sl').style.display=p.sff?'':'none';g('he-sl').style.display=p.he?'':'none';g('fa-rules').style.display=p.fa?'':'none';
+  if(currentTab==='overview')renderOverview();
+  else{const fmtKey=currentTab==='drawdown'?'dd':currentTab==='recovery'?'rec':currentTab==='funded'?'fa':currentTab;if(FMT_DEFS[fmtKey])buildFmtBar(fmtKey);renderTab(currentTab);}
+}
+
+function showTab(id){
+  currentTab=id;
+  ['overview','equity','mc','drawdown','recovery','streaks','funded'].forEach(t=>g('tab-'+t).style.display=t===id?'':'none');
+  document.querySelectorAll('.tab').forEach(btn=>btn.classList.toggle('on',btn.getAttribute('data-tab')===id));
+  const fmtKey=id==='drawdown'?'dd':id==='recovery'?'rec':id==='funded'?'fa':id;
+  if(FMT_DEFS[fmtKey])buildFmtBar(fmtKey);
+  if(id==='overview')renderOverview();else renderTab(id);
+}
+
+function getStateObj(){return{wr:+g('s-wr').value,lr:+g('s-lr').value,aw:+g('s-aw').value,al:+g('s-al').value,rpt:+g('s-rpt').value,acc:+g('s-acc').value,dll:+g('s-dll').value,fee:+g('s-fee').value,tpw:+g('s-tpw').value,mtd:+g('s-mtd').value,sims:+g('s-sims').value,ecn:+g('s-ecn').value,riskpct:+g('s-riskpct').value,nofvg:+g('s-nofvg').value,chop:+g('s-chop').value,eex:+g('s-eex').value,smv:+g('s-smv').value,rev:+g('s-rev').value,ovs:+g('s-ovs').value,comp:g('t-comp').checked,sff:g('t-sff').checked,he:g('t-he').checked,fa:g('t-fa').checked,fa_odd:+g('fa-odd').value,fa_dll:+g('fa-dll').value,fa_pt:+g('fa-pt').value,fa_cons:+g('fa-cons').value,fa_days:+g('fa-days').value};}
+function applyState(s){
+  const sl=(id,v)=>{if(g(id))g(id).value=v;};const ck=(id,v)=>{if(g(id))g(id).checked=v;};
+  sl('s-wr',s.wr);sl('s-lr',s.lr);sl('s-aw',s.aw);sl('s-al',s.al);sl('s-rpt',s.rpt);sl('s-acc',s.acc);sl('s-dll',s.dll);sl('s-fee',s.fee||10);sl('s-tpw',s.tpw);sl('s-mtd',s.mtd);sl('s-sims',s.sims||400);sl('s-ecn',s.ecn||20);sl('s-riskpct',s.riskpct||0.7);sl('s-nofvg',s.nofvg||30);sl('s-chop',s.chop||20);sl('s-eex',s.eex||15);sl('s-smv',s.smv||10);sl('s-rev',s.rev||8);sl('s-ovs',s.ovs||5);
+  ck('t-comp',!!s.comp);ck('t-sff',!!s.sff);ck('t-he',!!s.he);ck('t-fa',!!s.fa);
+  if(g('fa-odd'))g('fa-odd').value=s.fa_odd||3000;if(g('fa-dll'))g('fa-dll').value=s.fa_dll||2000;if(g('fa-pt'))g('fa-pt').value=s.fa_pt||3000;if(g('fa-cons'))g('fa-cons').value=s.fa_cons||40;if(g('fa-days'))g('fa-days').value=s.fa_days||5;
+}
+
+function saveState(){try{localStorage.setItem('mnq-sim-v3',JSON.stringify(getStateObj()));g('save-status').textContent='Saved '+new Date().toLocaleTimeString();setTimeout(()=>g('save-status').textContent='',3000);}catch(e){g('save-status').textContent='Save failed';}}
+function loadState(){try{const raw=localStorage.getItem('mnq-sim-v3');if(raw){applyState(JSON.parse(raw));sync();g('save-status').textContent='Loaded';setTimeout(()=>g('save-status').textContent='',3000);}else g('save-status').textContent='No saved state found';}catch(e){g('save-status').textContent='No saved state found';}}
+function resetDefaults(){applyState({wr:41.7,lr:33.3,aw:4.5,al:1.0,rpt:350,acc:50000,dll:2000,fee:10,tpw:5,mtd:2,sims:400,ecn:20,riskpct:0.7,nofvg:30,chop:20,eex:15,smv:10,rev:8,ovs:5,comp:false,sff:false,he:false,fa:false,fa_odd:3000,fa_dll:2000,fa_pt:3000,fa_cons:40,fa_days:5});sync();}
+
+try{const raw=localStorage.getItem('mnq-sim-v3');if(raw)applyState(JSON.parse(raw));}catch(e){}
+renderOverview();
+</script>
+</body>
+</html>
